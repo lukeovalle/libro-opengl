@@ -9,6 +9,7 @@ extern crate nalgebra;
 pub mod render_gl;
 pub mod resources;
 mod triangle;
+mod sierpinski;
 
 use std::time::Duration;
 use std::path::Path;
@@ -55,6 +56,10 @@ fn run() -> Result<(), anyhow::Error> {
 
     let triangle = triangle::Triangle::new(&res, &gl)?;
 
+    let points = sierpinski::Sierpinski::new(&res, &gl)?;
+
+    let mut mode = Mode::Triangle;    
+
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -65,18 +70,28 @@ fn run() -> Result<(), anyhow::Error> {
                     viewport.update_size(w, h);
                     viewport.set_used(&gl);
                 },
+                Event::KeyDown { keycode: Some(Keycode::F1), .. } => { mode = Mode::Triangle },
+                Event::KeyDown { keycode: Some(Keycode::F2), .. } => { mode = Mode::Sierpinski },
                 _ => {}
             }
         }
 
         color_buffer.clear(&gl);
 
-        triangle.render(&gl);
+        match mode {
+            Mode::Triangle => triangle.render(&gl),
+            Mode::Sierpinski => points.render(&gl)
+        }
 
         window.gl_swap_window();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
     Ok(())
+}
+
+enum Mode {
+    Triangle,
+    Sierpinski
 }
 

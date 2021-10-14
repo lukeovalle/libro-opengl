@@ -1,3 +1,6 @@
 /target
 /lib/gl/target
 /render_gl_derive/target
+/Cargo.lock
+/render_gl_derive/Cargo.lock
+
