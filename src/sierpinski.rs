@@ -63,14 +63,19 @@ pub struct Sierpinski {
     program: render_gl::Program,
     _vbo: buffer::ArrayBuffer,
     vao: buffer::VertexArray,
-    vertices: Vec<Vertex>
+    vertices: Vec<Vertex>,
+    method: SierpinskiType
 }
 
 impl Sierpinski {
-    pub fn new(res: &Resources, gl: &gl::Gl) -> Result<Sierpinski, anyhow::Error> {
+    pub fn new(
+        res: &Resources,
+        gl: &gl::Gl,
+        method: SierpinskiType
+    )-> Result<Sierpinski, anyhow::Error> {
         let program = render_gl::Program::from_res(gl, res, "shaders/sierpinski")?;
 
-        let vertices = generate_points(50000);
+        let vertices = method.generate_points();
 
         let vao = buffer::VertexArray::new(gl);
         vao.bind();
@@ -88,7 +93,8 @@ impl Sierpinski {
             program,
             _vbo: vbo,
             vao,
-            vertices
+            vertices,
+            method 
         })
     }
 
@@ -98,7 +104,10 @@ impl Sierpinski {
 
         unsafe {
             gl.DrawArrays(
-                gl::POINTS,
+                match self.method {
+                    SierpinskiType::Points {..} => gl::POINTS,
+                    SierpinskiType::Triangles {..} => gl::TRIANGLES
+                },
                 0,
                 self.vertices.len() as i32
             );
@@ -106,8 +115,21 @@ impl Sierpinski {
     }
 }
 
+pub enum SierpinskiType {
+    Points { number: usize },
+    Triangles { depth: usize }
+}
 
-fn generate_points(number_points: usize) -> Vec<Vertex> {
+impl SierpinskiType {
+    fn generate_points(&self) -> Vec<Vertex> {
+        match self {
+            SierpinskiType::Points { number } => generate_points_random(*number),
+            SierpinskiType::Triangles { depth } => generate_vertices_rec(*depth)
+        }
+    }
+}
+
+fn generate_points_random(number_points: usize) -> Vec<Vertex> {
     let mut points: Vec<Vertex> = Vec::with_capacity(number_points);
 
     let vertices = vec![
@@ -125,5 +147,47 @@ fn generate_points(number_points: usize) -> Vec<Vertex> {
     }
 
     points
+}
+
+fn generate_vertices_rec(depth: usize) -> Vec<Vertex> {
+    let starting_triangle = vec![
+        Vertex { pos: (-1.0, -1.0).into() },
+        Vertex { pos: (0.0, 1.0).into() },
+        Vertex { pos: (1.0, -1.0).into() }
+    ];
+
+    let mut vertices: Vec<Vertex> = Vec::with_capacity(3^(depth+1));
+
+    divide_triangle(
+        &mut vertices,
+        &starting_triangle[0],
+        &starting_triangle[1],
+        &starting_triangle[2],
+        depth
+    );
+
+    vertices
+}
+
+fn divide_triangle(
+    vertices: &mut Vec<Vertex>,
+    a: &Vertex,
+    b: &Vertex,
+    c: &Vertex,
+    depth: usize) {
+    if depth == 0 {
+        vertices.push(*a);
+        vertices.push(*b);
+        vertices.push(*c);
+        return;
+    }
+
+    let ab = (*a + *b) / 2.0;
+    let ac = (*a + *c) / 2.0;
+    let bc = (*b + *c) / 2.0;
+
+    divide_triangle(vertices, a, &ab, &ac, depth - 1);
+    divide_triangle(vertices, &ab, b, &bc, depth - 1);
+    divide_triangle(vertices, &ac, &bc, c, depth - 1);
 }
 

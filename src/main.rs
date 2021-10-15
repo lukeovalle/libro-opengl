@@ -20,6 +20,7 @@ use sdl2::keyboard::Keycode;
 //use failure::err_msg;
 
 use resources::Resources;
+use sierpinski::{Sierpinski, SierpinskiType};
 
 fn main() {
     if let Err(e) = run() {
@@ -56,7 +57,8 @@ fn run() -> Result<(), anyhow::Error> {
 
     let triangle = triangle::Triangle::new(&res, &gl)?;
 
-    let points = sierpinski::Sierpinski::new(&res, &gl)?;
+    let sierpinski_gasket = Sierpinski::new(&res, &gl, SierpinskiType::Points{ number: 70000 })?;
+    let sierpinski_recursive = Sierpinski::new(&res, &gl, SierpinskiType::Triangles { depth: 7 })?;
 
     let mut mode = Mode::Triangle;    
 
@@ -72,6 +74,7 @@ fn run() -> Result<(), anyhow::Error> {
                 },
                 Event::KeyDown { keycode: Some(Keycode::F1), .. } => { mode = Mode::Triangle },
                 Event::KeyDown { keycode: Some(Keycode::F2), .. } => { mode = Mode::Sierpinski },
+                Event::KeyDown { keycode: Some(Keycode::F3), .. } => { mode = Mode::SierpinskiRec },
                 _ => {}
             }
         }
@@ -80,7 +83,8 @@ fn run() -> Result<(), anyhow::Error> {
 
         match mode {
             Mode::Triangle => triangle.render(&gl),
-            Mode::Sierpinski => points.render(&gl)
+            Mode::Sierpinski => sierpinski_gasket.render(&gl),
+            Mode::SierpinskiRec => sierpinski_recursive.render(&gl)
         }
 
         window.gl_swap_window();
@@ -92,6 +96,7 @@ fn run() -> Result<(), anyhow::Error> {
 
 enum Mode {
     Triangle,
-    Sierpinski
+    Sierpinski,
+    SierpinskiRec
 }
 
